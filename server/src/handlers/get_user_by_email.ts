@@ -1,8 +1,19 @@
+import { db } from '../db';
+import { usersTable } from '../db/schema';
+import { eq } from 'drizzle-orm';
 import { type User } from '../schema';
 
 export const getUserByEmail = async (email: string): Promise<User | null> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is finding a user by their email address,
-    // typically used during authentication and login processes.
-    return Promise.resolve(null);
+  try {
+    const result = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1)
+      .execute();
+
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error('Failed to get user by email:', error);
+    throw error;
+  }
 };

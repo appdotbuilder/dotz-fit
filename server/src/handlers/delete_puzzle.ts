@@ -1,7 +1,23 @@
+import { db } from '../db';
+import { puzzlesTable } from '../db/schema';
+import { eq, and } from 'drizzle-orm';
+
 export const deletePuzzle = async (puzzleId: number, creatorId: number): Promise<boolean> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is deleting a puzzle, ensuring only the creator
-    // can delete their own puzzles. Used in puzzle management interface where
-    // creators can remove their published puzzles.
-    return Promise.resolve(true);
+  try {
+    // Delete puzzle only if it belongs to the creator
+    const result = await db.delete(puzzlesTable)
+      .where(
+        and(
+          eq(puzzlesTable.id, puzzleId),
+          eq(puzzlesTable.creator_id, creatorId)
+        )
+      )
+      .execute();
+
+    // Return true if a row was deleted, false otherwise
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error('Puzzle deletion failed:', error);
+    throw error;
+  }
 };

@@ -1,12 +1,25 @@
+import { db } from '../db';
+import { puzzlesTable, usersTable } from '../db/schema';
 import { type CreatePuzzleInput, type Puzzle } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const createPuzzle = async (input: CreatePuzzleInput): Promise<Puzzle> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is creating a new puzzle, either user-generated
-    // from the Puzzle Creator or system-generated daily puzzles. It validates
-    // the puzzle structure, stores board layout, dominoes, and regional conditions.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
+  try {
+    // Validate creator exists if creator_id is provided
+    if (input.creator_id) {
+      const creator = await db.select()
+        .from(usersTable)
+        .where(eq(usersTable.id, input.creator_id))
+        .execute();
+
+      if (creator.length === 0) {
+        throw new Error(`Creator with ID ${input.creator_id} does not exist`);
+      }
+    }
+
+    // Insert puzzle record
+    const result = await db.insert(puzzlesTable)
+      .values({
         title: input.title,
         description: input.description || null,
         creator_id: input.creator_id || null,
@@ -19,8 +32,19 @@ export const createPuzzle = async (input: CreatePuzzleInput): Promise<Puzzle> =>
         solution_data: input.solution_data || null,
         is_published: input.is_published || false,
         is_daily_puzzle: input.is_daily_puzzle || false,
-        daily_puzzle_date: input.daily_puzzle_date || null,
-        created_at: new Date(),
-        updated_at: new Date()
-    } as Puzzle);
+        daily_puzzle_date: input.daily_puzzle_date ? input.daily_puzzle_date.toISOString().split('T')[0] : null
+      })
+      .returning()
+      .execute();
+
+    // Convert date string back to Date object for return type consistency
+    const puzzle = result[0];
+    return {
+      ...puzzle,
+      daily_puzzle_date: puzzle.daily_puzzle_date ? new Date(puzzle.daily_puzzle_date) : null
+    };
+  } catch (error) {
+    console.error('Puzzle creation failed:', error);
+    throw error;
+  }
 };
